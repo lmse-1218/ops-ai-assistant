@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 ReAct Agent 推理演示</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        background: #f1f5f9;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 880px;
+        display: flex;
+        flex-direction: column;
+        background: #f1f5f9;
+    }
+
+    /* ===== 顶部标题栏 ===== */
+    header {
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    header h1 { font-size: 18px; color: #0f172a; }
+    header .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .status {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12px; color: #64748b;
+    }
+    .status-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #10b981;
+    }
+    .status-dot.busy { background: #f59e0b; animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { opacity: .4; } }
+
+    /* ===== 聊天区域 ===== */
+    #chat {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* 用户消息：右侧紫色气泡 */
+    .msg-user {
+        align-self: flex-end;
+        max-width: 75%;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 16px 16px 4px 16px;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        box-shadow: 0 2px 6px rgba(99, 102, 241, .25);
+    }
+
+    /* ===== Agent 推理步骤卡片：左侧，四色区分 ===== */
+    .step {
+        align-self: flex-start;
+        width: 94%;
+        border-radius: 12px;
+        border-left: 4px solid #cbd5e1;
+        padding: 10px 14px;
+        animation: slideIn .25s ease;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse { 50% { opacity: .4; } }
+
+    .step-head {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 12px; font-weight: 700;
+        margin-bottom: 6px; letter-spacing: .3px;
+    }
+    .step-content {
+        font-size: 14px; line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #1e293b;
+    }
+    .step-content.placeholder { color: #94a3b8; font-style: italic; }
+
+    /* 💭 Thought 思考 —— 灰色 */
+    .step-thought { border-left-color: #9ca3af; background: #f9fafb; }
+    .step-thought .step-head { color: #6b7280; }
+
+    /* ⚡ Action 行动 —— 蓝色 */
+    .step-action { border-left-color: #3b82f6; background: #eff6ff; }
+    .step-action .step-head { color: #2563eb; }
+
+    /* 👁️ Observation 观察 —— 绿色 */
+    .step-observation { border-left-color: #10b981; background: #ecfdf5; }
+    .step-observation .step-head { color: #059669; }
+
+    /* ✅ Answer 回答 —— 紫色 */
+    .step-answer { border-left-color: #8b5cf6; background: #f5f3ff; }
+    .step-answer .step-head { color: #7c3aed; }
+
+    /* ❌ Error 错误 —— 红色（网络/服务异常时显示） */
+    .step-error { border-left-color: #ef4444; background: #fef2f2; }
+    .step-error .step-head { color: #dc2626; }
+
+    /* ===== 等待动画（三个跳动圆点） ===== */
+    .typing { align-self: flex-start; padding: 10px 4px; }
+    .typing span {
+        display: inline-block; width: 8px; height: 8px;
+        border-radius: 50%; background: #94a3b8;
+        margin-right: 5px; animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce {
+        0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+        30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ===== 底部输入栏 ===== */
+    .input-bar {
+        background: #fff;
+        border-top: 1px solid #e2e8f0;
+        padding: 14px 24px;
+        display: flex; gap: 12px;
+    }
+    .input-bar input {
+        flex: 1;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color .2s;
+    }
+    .input-bar input:focus { border-color: #8b5cf6; }
+    .input-bar button {
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 0 28px;
+        cursor: pointer;
+        transition: opacity .2s;
+    }
+    .input-bar button:disabled { opacity: .5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>🤖 ReAct Agent 推理演示</h1>
+            <div class="sub">思考 → 行动 → 观察 → 回答，实时流式展示推理全过程</div>
+        </div>
+        <div class="status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">就绪</span>
+        </div>
+    </header>
+
+    <div id="chat"></div>
+
+    <div class="input-bar">
+        <input id="question" type="text" placeholder="输入问题，例如：日志里出现了 ' OR '1'='1，是什么安全问题？"
+               autocomplete="off">
+        <button id="sendBtn">发送</button>
+    </div>
+</div>
+
+<script>
+    // 页面以 http 访问（同源）时用相对路径；以 file:// 直接打开时用绝对地址
+    const API_BASE = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8002";
+
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("question");
+    const sendBtn = document.getElementById("sendBtn");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+
+    // 四种步骤的展示配置：图标 / 标签 / 配色类名
+    const STEP_META = {
+        thought:     { icon: "💭", label: "Thought · 思考",   cls: "step-thought" },
+        action:      { icon: "⚡", label: "Action · 行动",    cls: "step-action" },
+        observation: { icon: "👁️", label: "Observation · 观察", cls: "step-observation" },
+        answer:      { icon: "✅", label: "Answer · 回答",    cls: "step-answer" },
+        error:       { icon: "❌", label: "Error · 错误",     cls: "step-error" },
+    };
+
+    let streaming = false;   // 是否正在流式输出中
+    let pendingCard = null;  // 当前等待填充内容的步骤卡片
+    let typingEl = null;     // 等待动画元素
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function scrollToBottom() {
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // 追加用户消息气泡
+    function addUserMsg(text) {
+        const el = document.createElement("div");
+        el.className = "msg-user";
+        el.textContent = text;
+        chat.appendChild(el);
+        scrollToBottom();
+    }
+
+    // 创建一张步骤卡片（步骤开始时立即出现，内容稍后填充）
+    function addStepCard(type) {
+        const meta = STEP_META[type] || STEP_META.thought;
+        const el = document.createElement("div");
+        el.className = "step " + meta.cls;
+        el.innerHTML =
+            `<div class="step-head">${meta.icon} ${meta.label}</div>` +
+            `<div class="step-content placeholder">…</div>`;
+        chat.appendChild(el);
+        scrollToBottom();
+        return el.querySelector(".step-content");
+    }
+
+    // 填充步骤内容
+    function fillStep(card, text) {
+        card.textContent = text;
+        card.classList.remove("placeholder");
+        scrollToBottom();
+    }
+
+    // 显示/隐藏等待动画
+    function showTyping() {
+        typingEl = document.createElement("div");
+        typingEl.className = "typing";
+        typingEl.innerHTML = "<span></span><span></span><span></span>";
+        chat.appendChild(typingEl);
+        scrollToBottom();
+    }
+    function hideTyping() {
+        if (typingEl) { typingEl.remove(); typingEl = null; }
+    }
+
+    function setStatus(text, busy) {
+        statusText.textContent = text;
+        statusDot.classList.toggle("busy", busy);
+    }
+
+    // 处理一条 SSE 事件
+    function handleEvent(evt) {
+        switch (evt.type) {
+            case "step_start":    // content 是步骤类型名，立即创建对应颜色的卡片
+                hideTyping();
+                pendingCard = addStepCard(evt.content);
+                break;
+            case "step_content":  // 填充该步骤的实际内容
+                if (pendingCard) fillStep(pendingCard, evt.content || "（空）");
+                break;
+            case "step_end":      // 本步骤结束
+                pendingCard = null;
+                showTyping();
+                break;
+            case "done":          // 整个推理流程结束
+                hideTyping();
+                break;
+            case "error":
+                hideTyping();
+                fillStep(addStepCard("error").parentNode.querySelector(".step-content"), evt.content);
+                pendingCard = null;
+                break;
+        }
+    }
+
+    async function send() {
+        const question = input.value.trim();
+        if (!question || streaming) return;
+
+        streaming = true;
+        sendBtn.disabled = true;
+        input.value = "";
+        setStatus("推理中…", true);
+
+        addUserMsg(question);
+        showTyping();
+
+        try {
+            // POST 请求不能用 EventSource，改用 fetch + ReadableStream 读取 SSE
+            const resp = await fetch(API_BASE + "/agent/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: question }),
+            });
+
+            if (!resp.ok) {
+                hideTyping();
+                const card = addStepCard("error").parentNode.querySelector(".step-content");
+                fillStep(card, `服务返回错误：HTTP ${resp.status}`);
+                return;
+            }
+
+            // 按行解析 SSE 流：事件以空行（\n\n）分隔，每行以 "data: " 开头
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let idx;
+                while ((idx = buffer.indexOf("\n\n")) !== -1) {
+                    const rawEvent = buffer.slice(0, idx);
+                    buffer = buffer.slice(idx + 2);
+
+                    for (const line of rawEvent.split("\n")) {
+                        if (!line.startsWith("data: ")) continue;
+                        const payload = line.slice(6);
+                        if (payload === "[DONE]") {   // 结束标记
+                            handleEvent({ type: "done" });
+                            continue;
+                        }
+                        try {
+                            handleEvent(JSON.parse(payload));
+                        } catch (e) { /* 忽略无法解析的行 */ }
+                    }
+                }
+            }
+        } catch (err) {
+            hideTyping();
+            const card = addStepCard("error").parentNode.querySelector(".step-content");
+            fillStep(card, "网络错误：" + err.message);
+        } finally {
+            hideTyping();
+            streaming = false;
+            sendBtn.disabled = false;
+            setStatus("就绪", false);
+            input.focus();
+        }
+    }
+
+    sendBtn.addEventListener("click", send);
+    input.addEventListener("keydown", e => {
+        if (e.key === "Enter") send();
+    });
+</script>
+</body>
+</html>

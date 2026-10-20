@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌐 浏览器智能助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 720px;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #718096;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        /* ===== 选项卡 ===== */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            background: #edf2f7;
+            padding: 6px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 9px;
+            background: transparent;
+            color: #718096;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .tab:hover {
+            color: #4a5568;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .tab.active {
+            background: #ffffff;
+            color: #2d3748;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* ===== 输入区域 ===== */
+        .input-box {
+            width: 100%;
+            min-height: 140px;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.25s;
+            outline: none;
+            color: #2d3748;
+        }
+
+        .input-box:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        .input-box::placeholder {
+            color: #a0aec0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            color: #fff;
+            font-family: inherit;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-summarize { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .btn-explain   { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .btn-translate { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .btn-ask {
+            flex: none;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #f6ad55, #ed8936);
+        }
+        .btn-kb-ask {
+            flex: none;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #4facfe, #00b894);
+            white-space: nowrap;
+        }
+
+        /* ===== 知识库问答提示语 ===== */
+        .kb-tip {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            color: #2b6cb0;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 18px;
+        }
+
+        .kb-answer-card {
+            background: linear-gradient(135deg, #f0fff4, #e6fffa);
+            border-color: #4fd1c5;
+        }
+
+        .kb-label {
+            color: #0d7377;
+        }
+
+        /* ===== 网页问答区域 ===== */
+        .question-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .question-input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.25s;
+            color: #2d3748;
+        }
+
+        .question-input:focus {
+            border-color: #ed8936;
+            box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.15);
+        }
+
+        .question-input::placeholder {
+            color: #a0aec0;
+        }
+
+        /* ===== 结果区域 ===== */
+        .result-area {
+            margin-top: 24px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            min-height: 80px;
+            color: #2d3748;
+            font-size: 15px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .result-area.empty {
+            color: #a0aec0;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-area.error {
+            background: #fff5f5;
+            border-color: #fc8181;
+            color: #c53030;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 13px;
+            color: #718096;
+            min-height: 18px;
+        }
+
+        .loading::after {
+            content: " ⏳";
+        }
+
+        /* ===== RAG 回答 + 参考片段 ===== */
+        .rag-result {
+            margin-top: 24px;
+        }
+
+        .rag-answer-card {
+            background: linear-gradient(135deg, #fffaf0, #fff5eb);
+            border: 1px solid #f6ad55;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #c05621;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .rag-answer {
+            color: #2d3748;
+            font-size: 15px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .sources-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #718096;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .sources {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .source-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f7fafc;
+            overflow: hidden;
+            transition: border-color 0.25s;
+        }
+
+        .source-card:hover {
+            border-color: #667eea;
+        }
+
+        .source-card summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            cursor: pointer;
+            list-style: none;
+            font-size: 14px;
+            color: #4a5568;
+            user-select: none;
+        }
+
+        .source-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .source-card summary:hover {
+            background: #edf2f7;
+        }
+
+        .source-badge {
+            flex: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .source-preview {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #718096;
+        }
+
+        .source-arrow {
+            flex: none;
+            color: #a0aec0;
+            font-size: 12px;
+            transition: transform 0.25s;
+        }
+
+        .source-card[open] .source-arrow {
+            transform: rotate(90deg);
+        }
+
+        .source-full {
+            padding: 14px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #4a5568;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 浏览器智能助手</h1>
+        <p class="subtitle">一键完成总结 / 解释 / 翻译，或对网页内容进行智能问答</p>
+
+        <!-- 选项卡切换 -->
+        <div class="tabs">
+            <button class="tab active" data-tab="assistant">📝 助手</button>
+            <button class="tab" data-tab="rag">📖 网页问答</button>
+            <button class="tab" data-tab="kb">📚 知识库问答</button>
+        </div>
+
+        <!-- 选项卡 1：总结 / 解释 / 翻译 -->
+        <div id="tab-assistant" class="tab-panel active">
+            <textarea id="content" class="input-box" placeholder="在此粘贴网页内容或输入 URL..."></textarea>
+
+            <div class="btn-group">
+                <button class="btn btn-summarize" data-action="summarize">📝 总结</button>
+                <button class="btn btn-explain" data-action="explain">💡 解释</button>
+                <button class="btn btn-translate" data-action="translate">🌐 翻译</button>
+            </div>
+
+            <div id="result" class="result-area empty">结果将显示在这里</div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <!-- 选项卡 2：网页问答（RAG） -->
+        <div id="tab-rag" class="tab-panel">
+            <textarea id="rag-content" class="input-box" placeholder="在此粘贴网页长文本内容，AI 将基于这些内容回答你的问题..."></textarea>
+
+            <div class="question-row">
+                <input id="question" class="question-input" type="text"
+                       placeholder="输入你的问题，例如：这篇文章的核心观点是什么？">
+                <button id="ask-btn" class="btn btn-ask">🔍 提问</button>
+            </div>
+
+            <!-- 问答结果：回答 + 参考片段 -->
+            <div id="rag-result" class="rag-result" style="display:none;">
+                <div class="rag-answer-card">
+                    <div class="card-label">💬 AI 回答</div>
+                    <div id="rag-answer" class="rag-answer"></div>
+                </div>
+
+                <div class="sources-title">📎 参考片段（点击展开查看原文）</div>
+                <div id="rag-sources" class="sources"></div>
+            </div>
+
+            <div id="rag-status" class="status"></div>
+        </div>
+
+        <!-- 选项卡 3：知识库问答（基于 ChromaDB 持久化知识库） -->
+        <div id="tab-kb" class="tab-panel">
+            <p class="kb-tip">💡 答案来自服务器端已构建的知识库，无需粘贴网页内容，直接提问即可。</p>
+
+            <div class="question-row">
+                <input id="kb-question" class="question-input" type="text"
+                       placeholder="输入你的问题，例如：SQL注入如何修复？">
+                <button id="kb-ask-btn" class="btn btn-kb-ask">🔍 检索并提问</button>
+            </div>
+
+            <!-- 问答结果：回答 + 参考来源 -->
+            <div id="kb-result" class="rag-result" style="display:none;">
+                <div class="rag-answer-card kb-answer-card">
+                    <div class="card-label kb-label">💬 AI 回答</div>
+                    <div id="kb-answer" class="rag-answer"></div>
+                </div>
+
+                <div class="sources-title">📎 参考来源（检索到的文档块，点击展开原文）</div>
+                <div id="kb-sources" class="sources"></div>
+            </div>
+
+            <div id="kb-status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= 选项卡切换 ================= */
+        const tabs = document.querySelectorAll(".tab");
+        const panels = document.querySelectorAll(".tab-panel");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                // 切换选项卡高亮
+                tabs.forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                // 切换对应面板
+                panels.forEach(p => p.classList.remove("active"));
+                document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
+            });
+        });
+
+        /* ================= 助手：总结 / 解释 / 翻译 ================= */
+        const API_URL = "/browser-assistant";
+        const resultEl = document.getElementById("result");
+        const statusEl = document.getElementById("status");
+        const contentEl = document.getElementById("content");
+        const buttons = document.querySelectorAll(".btn-group .btn");
+
+        // 点击按钮调用接口
+        buttons.forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const content = contentEl.value.trim();
+                const action = btn.dataset.action;
+
+                if (!content) {
+                    showResult("请先输入网页内容或 URL", true);
+                    return;
+                }
+
+                // 禁用所有按钮 + 加载态
+                setButtonsDisabled(true);
+                setResult("");
+                resultEl.classList.remove("empty", "error");
+                statusEl.textContent = "正在请求中...";
+                statusEl.className = "status loading";
+
+                try {
+                    const resp = await fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ content, action }),
+                    });
+
+                    const data = await resp.json();
+
+                    if (resp.ok && data.code === 200) {
+                        showResult(data.data, false);
+                        statusEl.textContent = `✅ 操作成功（${action}）`;
+                    } else {
+                        const msg = data.message || "请求失败";
+                        showResult(msg, true);
+                        statusEl.textContent = `❌ ${msg}`;
+                    }
+                } catch (err) {
+                    showResult("网络错误：" + err.message, true);
+                    statusEl.textContent = "❌ 请求失败";
+                } finally {
+                    setButtonsDisabled(false);
+                    statusEl.classList.remove("loading");
+                }
+            });
+        });
+
+        function setResult(text) {
+            resultEl.textContent = text;
+        }
+
+        function showResult(text, isError) {
+            resultEl.textContent = text;
+            resultEl.classList.remove("empty", "error");
+            if (!text) resultEl.classList.add("empty");
+            if (isError) resultEl.classList.add("error");
+        }
+
+        function setButtonsDisabled(disabled) {
+            buttons.forEach(b => b.disabled = disabled);
+        }
+
+        /* ================= 网页问答（RAG） ================= */
+        const RAG_URL = "/rag-query";
+        const ragContentEl = document.getElementById("rag-content");
+        const questionEl = document.getElementById("question");
+        const askBtn = document.getElementById("ask-btn");
+        const ragResultEl = document.getElementById("rag-result");
+        const ragAnswerEl = document.getElementById("rag-answer");
+        const ragSourcesEl = document.getElementById("rag-sources");
+        const ragStatusEl = document.getElementById("rag-status");
+
+        async function askQuestion() {
+            const content = ragContentEl.value.trim();
+            const question = questionEl.value.trim();
+
+            if (!content) {
+                showRagError("请先粘贴网页内容");
+                return;
+            }
+            if (!question) {
+                showRagError("请输入你的问题");
+                return;
+            }
+
+            // 进入加载态
+            askBtn.disabled = true;
+            ragResultEl.style.display = "none";
+            ragStatusEl.textContent = "正在检索资料并生成回答...";
+            ragStatusEl.className = "status loading";
+
+            try {
+                const resp = await fetch(RAG_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content, question }),
+                });
+
+                const data = await resp.json();
+
+                if (resp.ok && data.answer) {
+                    // 显示回答
+                    ragAnswerEl.textContent = data.answer;
+                    // 渲染参考片段（可折叠卡片）
+                    renderSources(data.sources || []);
+                    ragResultEl.style.display = "block";
+                    ragStatusEl.textContent = "✅ 回答完成";
+                } else {
+                    showRagError(data.message || "请求失败");
+                }
+            } catch (err) {
+                showRagError("网络错误：" + err.message);
+            } finally {
+                askBtn.disabled = false;
+                ragStatusEl.classList.remove("loading");
+            }
+        }
+
+        // 渲染参考片段列表：预览一行，点击展开查看完整原文
+        function renderSources(sources) {
+            ragSourcesEl.innerHTML = "";
+
+            if (!sources.length) {
+                ragSourcesEl.innerHTML = '<div class="source-preview" style="padding:12px;">没有检索到相关片段</div>';
+                return;
+            }
+
+            sources.forEach((chunk, i) => {
+                const preview = chunk.length > 60 ? chunk.slice(0, 60) + "…" : chunk;
+                const card = document.createElement("details");
+                card.className = "source-card";
+                card.innerHTML = `
+                    <summary>
+                        <span class="source-badge">${i + 1}</span>
+                        <span class="source-preview">${escapeHtml(preview)}</span>
+                        <span class="source-arrow">▶</span>
+                    </summary>
+                    <div class="source-full">${escapeHtml(chunk)}</div>
+                `;
+                ragSourcesEl.appendChild(card);
+            });
+        }
+
+        function showRagError(msg) {
+            ragResultEl.style.display = "none";
+            ragStatusEl.textContent = "❌ " + msg;
+            ragStatusEl.classList.remove("loading");
+        }
+
+        // 防止片段文本中的 HTML 特殊字符破坏页面结构
+        function escapeHtml(str) {
+            const div = document.createElement("div");
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // 点击提问按钮 / 按下回车均可触发
+        askBtn.addEventListener("click", askQuestion);
+        questionEl.addEventListener("keydown", e => {
+            if (e.key === "Enter") askQuestion();
+        });
+
+        /* ================= 知识库问答（ChromaDB 检索） ================= */
+        const KB_URL = "/rag-query";
+        const kbQuestionEl = document.getElementById("kb-question");
+        const kbAskBtn = document.getElementById("kb-ask-btn");
+        const kbResultEl = document.getElementById("kb-result");
+        const kbAnswerEl = document.getElementById("kb-answer");
+        const kbSourcesEl = document.getElementById("kb-sources");
+        const kbStatusEl = document.getElementById("kb-status");
+
+        async function askKnowledgeBase() {
+            const question = kbQuestionEl.value.trim();
+
+            if (!question) {
+                kbResultEl.style.display = "none";
+                kbStatusEl.textContent = "❌ 请输入你的问题";
+                return;
+            }
+
+            // 进入加载态
+            kbAskBtn.disabled = true;
+            kbResultEl.style.display = "none";
+            kbStatusEl.textContent = "正在检索知识库并生成回答...";
+            kbStatusEl.className = "status loading";
+
+            try {
+                const resp = await fetch(KB_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    // 知识库问答只需传 question，资料来自服务器端持久化知识库
+                    body: JSON.stringify({ question }),
+                });
+
+                const data = await resp.json();
+
+                if (resp.ok && data.answer) {
+                    // 显示回答
+                    kbAnswerEl.textContent = data.answer;
+                    // 渲染参考来源（可折叠卡片）
+                    renderKbSources(data.sources || []);
+                    kbResultEl.style.display = "block";
+                    kbStatusEl.textContent = `✅ 回答完成（参考 ${ (data.sources || []).length } 个文档块）`;
+                } else {
+                    kbResultEl.style.display = "none";
+                    kbStatusEl.textContent = "❌ " + (data.message || "请求失败");
+                }
+            } catch (err) {
+                kbResultEl.style.display = "none";
+                kbStatusEl.textContent = "❌ 网络错误：" + err.message;
+            } finally {
+                kbAskBtn.disabled = false;
+                kbStatusEl.classList.remove("loading");
+            }
+        }
+
+        // 渲染参考来源：每条一个可折叠卡片，预览一行，点击展开完整原文
+        function renderKbSources(sources) {
+            kbSourcesEl.innerHTML = "";
+
+            if (!sources.length) {
+                kbSourcesEl.innerHTML = '<div class="source-preview" style="padding:12px;">没有检索到相关文档块</div>';
+                return;
+            }
+
+            sources.forEach((chunk, i) => {
+                const preview = chunk.length > 60 ? chunk.slice(0, 60) + "…" : chunk;
+                const card = document.createElement("details");
+                card.className = "source-card";
+                card.innerHTML = `
+                    <summary>
+                        <span class="source-badge">${i + 1}</span>
+                        <span class="source-preview">${escapeHtml(preview)}</span>
+                        <span class="source-arrow">▶</span>
+                    </summary>
+                    <div class="source-full">${escapeHtml(chunk)}</div>
+                `;
+                kbSourcesEl.appendChild(card);
+            });
+        }
+
+        // 点击按钮 / 回车触发
+        kbAskBtn.addEventListener("click", askKnowledgeBase);
+        kbQuestionEl.addEventListener("keydown", e => {
+            if (e.key === "Enter") askKnowledgeBase();
+        });
+    </script>
+</body>
+</html>
