@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛡️ 安全智能运维平台</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --primary-light: #dbeafe;
+        --bg: #f0f5ff;
+        --card: #ffffff;
+        --text: #1e293b;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --radius: 12px;
+    }
+
+    body {
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* ===== 顶部导航栏 ===== */
+    .topbar {
+        background: linear-gradient(135deg, #1e40af, #2563eb);
+        color: #fff;
+        padding: 0 24px;
+        box-shadow: 0 2px 12px rgba(37, 99, 235, .35);
+        position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-inner {
+        max-width: 960px; margin: 0 auto;
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 8px;
+        padding: 12px 0;
+    }
+    .logo { font-size: 18px; font-weight: 700; letter-spacing: .5px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab {
+        border: none; cursor: pointer;
+        background: rgba(255, 255, 255, .12);
+        color: #dbeafe;
+        font-size: 14px; font-weight: 600;
+        padding: 9px 18px; border-radius: 10px;
+        transition: all .25s;
+    }
+    .tab:hover { background: rgba(255, 255, 255, .22); color: #fff; }
+    .tab.active {
+        background: #fff; color: var(--primary-dark);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+    }
+
+    /* ===== 主体面板 ===== */
+    main {
+        flex: 1;
+        width: 100%; max-width: 960px;
+        margin: 0 auto;
+        padding: 20px 16px;
+    }
+    .panel { display: none; }
+    .panel.active {
+        display: flex; flex-direction: column; gap: 14px;
+        animation: fadeSlide .3s ease;
+    }
+    @keyframes fadeSlide {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, .06);
+    }
+    .card h2 { font-size: 16px; margin-bottom: 4px; }
+    .card .desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+
+    /* 通用输入行 */
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row input[type="text"] {
+        flex: 1; min-width: 200px;
+        border: 1px solid #cbd5e1; border-radius: 10px;
+        padding: 11px 14px; font-size: 14px; outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .row input[type="text"]:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .row textarea {
+        width: 100%; min-height: 110px; resize: vertical;
+        border: 1px solid #cbd5e1; border-radius: 10px;
+        padding: 12px 14px; font-size: 14px; line-height: 1.6;
+        font-family: inherit; outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .row textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    /* 通用按钮 */
+    .btn {
+        border: none; cursor: pointer;
+        background: linear-gradient(135deg, var(--primary), #3b82f6);
+        color: #fff; font-size: 14px; font-weight: 600;
+        padding: 11px 24px; border-radius: 10px;
+        transition: opacity .2s, transform .1s;
+    }
+    .btn:hover { opacity: .92; }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn.ghost {
+        background: #fff; color: var(--primary);
+        border: 1px solid var(--primary);
+    }
+
+    /* 工具选择按钮组 */
+    .tool-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chip {
+        border: 1px solid #cbd5e1; background: #fff;
+        border-radius: 10px; padding: 10px 18px;
+        font-size: 14px; font-weight: 600; color: var(--muted);
+        cursor: pointer; transition: all .2s;
+    }
+    .chip:hover { border-color: var(--primary); color: var(--primary); }
+    .chip.active {
+        background: var(--primary); border-color: var(--primary);
+        color: #fff; box-shadow: 0 2px 8px rgba(37, 99, 235, .3);
+    }
+
+    /* 结果展示区 */
+    .result {
+        margin-top: 12px;
+        background: #f8fafc; border: 1px solid var(--border);
+        border-radius: 10px; padding: 14px;
+        font-size: 14px; line-height: 1.7;
+        white-space: pre-wrap; word-break: break-word;
+        display: none;
+        max-height: 420px; overflow-y: auto;
+    }
+    .result.show { display: block; animation: fadeSlide .25s ease; }
+    .result.error { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    .result-title { font-weight: 700; color: var(--primary-dark); margin-bottom: 8px; }
+
+    /* 日志条目 */
+    .log-item {
+        display: flex; gap: 10px; align-items: flex-start;
+        padding: 8px 0; border-bottom: 1px dashed var(--border);
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-idx {
+        flex-shrink: 0; background: var(--primary-light); color: var(--primary-dark);
+        font-size: 11px; font-weight: 700; border-radius: 6px;
+        padding: 2px 7px; margin-top: 2px;
+    }
+    .log-line { font-size: 13px; font-weight: 600; color: var(--text); }
+    .log-line .log-time { font-weight: 400; color: var(--muted); font-size: 12px; }
+    .log-sub { font-size: 12px; color: var(--muted); line-height: 1.6; word-break: break-all; }
+
+    /* ===== Agent 对话面板 ===== */
+    .chat-box {
+        display: flex; flex-direction: column;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 1px 4px rgba(15, 23, 42, .06);
+        overflow: hidden;
+    }
+    #agentChat {
+        height: 440px; overflow-y: auto;
+        padding: 16px;
+        display: flex; flex-direction: column; gap: 10px;
+        background: #f8fafc;
+    }
+    .msg-user {
+        align-self: flex-end; max-width: 75%;
+        background: linear-gradient(135deg, var(--primary), #3b82f6);
+        color: #fff; padding: 10px 16px;
+        border-radius: 16px 16px 4px 16px;
+        font-size: 14px; line-height: 1.6;
+        white-space: pre-wrap;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, .25);
+    }
+    .step {
+        align-self: flex-start; width: 94%;
+        border-radius: 10px; border-left: 4px solid #cbd5e1;
+        padding: 10px 14px;
+        animation: fadeSlide .25s ease;
+    }
+    .step-head {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 12px; font-weight: 700; margin-bottom: 6px;
+    }
+    .step-content {
+        font-size: 14px; line-height: 1.7;
+        white-space: pre-wrap; word-break: break-word;
+        color: var(--text);
+    }
+    .step-content.placeholder { color: #94a3b8; font-style: italic; }
+    /* 💭 Thought 灰 / ⚡ Action 蓝 / 👁️ Observation 绿 / ✅ Answer 紫 / ❌ Error 红 */
+    .step-thought     { border-left-color: #9ca3af; background: #f3f4f6; }
+    .step-thought .step-head     { color: #6b7280; }
+    .step-action      { border-left-color: var(--primary); background: #eff6ff; }
+    .step-action .step-head      { color: var(--primary-dark); }
+    .step-observation { border-left-color: #10b981; background: #ecfdf5; }
+    .step-observation .step-head { color: #059669; }
+    .step-answer      { border-left-color: #8b5cf6; background: #f5f3ff; }
+    .step-answer .step-head      { color: #7c3aed; }
+    .step-error       { border-left-color: #ef4444; background: #fef2f2; }
+    .step-error .step-head       { color: #dc2626; }
+
+    .typing { align-self: flex-start; padding: 10px 4px; }
+    .typing span {
+        display: inline-block; width: 8px; height: 8px;
+        border-radius: 50%; background: #94a3b8; margin-right: 5px;
+        animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce {
+        0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+        30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    .agent-input { display: flex; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--border); }
+    .agent-input input {
+        flex: 1; border: 1px solid #cbd5e1; border-radius: 10px;
+        padding: 11px 14px; font-size: 14px; outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .agent-input input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    /* ===== 知识库来源列表 ===== */
+    .sources { margin-top: 10px; display: none; }
+    .sources.show { display: block; }
+    .source-item {
+        background: #f8fafc; border: 1px solid var(--border);
+        border-radius: 8px; margin-bottom: 8px; overflow: hidden;
+    }
+    .source-toggle {
+        width: 100%; text-align: left; border: none; background: none;
+        padding: 10px 12px; font-size: 13px; color: var(--text);
+        cursor: pointer; display: flex; align-items: center; gap: 8px;
+    }
+    .source-toggle:hover { background: #eff6ff; }
+    .source-badge {
+        flex-shrink: 0; background: var(--primary); color: #fff;
+        font-size: 11px; font-weight: 700;
+        border-radius: 6px; padding: 2px 8px;
+    }
+    .source-body {
+        display: none; padding: 0 12px 12px;
+        font-size: 13px; line-height: 1.7; color: #475569;
+        white-space: pre-wrap; word-break: break-word;
+    }
+    .source-item.open .source-body { display: block; }
+
+    /* ===== 页脚 ===== */
+    footer {
+        background: #0f172a; color: #94a3b8;
+        text-align: center; padding: 18px 16px;
+        font-size: 13px; line-height: 1.8;
+    }
+    footer .members { color: #cbd5e1; }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 640px) {
+        .topbar-inner { flex-direction: column; align-items: stretch; }
+        .tabs { justify-content: center; }
+        .tab { flex: 1; text-align: center; padding: 9px 8px; }
+        #agentChat { height: 360px; }
+        .step { width: 100%; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ================= 顶部导航栏 ================= -->
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="logo">🛡️ 安全智能运维平台</div>
+        <nav class="tabs">
+            <button class="tab active" data-tab="agent">🤖 Agent对话</button>
+            <button class="tab" data-tab="tools">🔧 安全工具箱</button>
+            <button class="tab" data-tab="kb">📚 知识库问答</button>
+            <button class="tab" data-tab="browser">🌐 浏览器助手</button>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <!-- ================= 面板 1：Agent 对话 ================= -->
+    <section id="panel-agent" class="panel active">
+        <div class="chat-box">
+            <div id="agentChat">
+                <div class="step step-thought" style="border:none;align-self:center;background:transparent;color:#94a3b8;font-size:13px;">
+                    💬 向 Agent 提问，它将自动思考并调用工具回答（如：日志里出现了 ' OR '1'='1，是什么安全问题？）
+                </div>
+            </div>
+            <div class="agent-input">
+                <input id="agentQuestion" type="text" placeholder="输入问题，Agent 会思考并自动调用工具…" autocomplete="off">
+                <button class="btn" id="agentSend">发送</button>
+                <button class="btn ghost" id="agentClear">清空对话</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 面板 2：安全工具箱 ================= -->
+    <section id="panel-tools" class="panel">
+        <div class="card">
+            <h2>🔧 安全工具箱</h2>
+            <div class="desc">选择一个工具，输入待分析的文本或故障描述，立即获取结构化报告</div>
+            <div class="tool-chips">
+                <button class="chip active" data-tool="analyze">🧪 漏洞分析</button>
+                <button class="chip" data-tool="troubleshoot">🖥️ 故障排查</button>
+                <button class="chip" data-tool="audit">🔍 配置审计</button>
+            </div>
+            <div class="row">
+                <textarea id="toolInput" placeholder="例如：日志里出现了 UNION SELECT 和 ' OR '1'='1；或：CPU 98%，磁盘空间不足；或：密码最小长度6位，未启用TLS加密"></textarea>
+            </div>
+            <div class="row" style="margin-top:12px;">
+                <button class="btn" id="toolRun">▶ 执行</button>
+                <button class="btn ghost" id="logsBtn">📋 查看日志</button>
+            </div>
+            <div class="result" id="toolResult"></div>
+            <div class="result" id="logsResult"></div>
+        </div>
+    </section>
+
+    <!-- ================= 面板 3：知识库问答 ================= -->
+    <section id="panel-kb" class="panel">
+        <div class="card">
+            <h2>📚 知识库问答</h2>
+            <div class="desc">基于服务器端向量知识库（ChromaDB + BM25 混合检索），检索最相关的资料片段交给 AI 回答</div>
+            <div class="row">
+                <input id="kbQuestion" type="text" placeholder="例如：SQL注入如何修复？XSS攻击是什么？"
+                       onkeydown="if(event.key==='Enter')kbAsk()">
+                <button class="btn" id="kbAskBtn" onclick="kbAsk()">🔍 提问</button>
+            </div>
+            <div class="result" id="kbAnswer"></div>
+            <div class="sources" id="kbSources"></div>
+        </div>
+    </section>
+
+    <!-- ================= 面板 4：浏览器助手 ================= -->
+    <section id="panel-browser" class="panel">
+        <div class="card">
+            <h2>🌐 浏览器助手</h2>
+            <div class="desc">粘贴网页内容，AI 帮你总结要点、解释概念或翻译成英文</div>
+            <div class="row">
+                <textarea id="baContent" placeholder="在此粘贴需要处理的网页文本…"></textarea>
+            </div>
+            <div class="row" style="margin-top:12px;">
+                <button class="btn" data-action="summarize" onclick="baRun('summarize')">📝 总结</button>
+                <button class="btn" data-action="explain" onclick="baRun('explain')">💡 解释</button>
+                <button class="btn" data-action="translate" onclick="baRun('translate')">🔤 翻译</button>
+            </div>
+            <div class="result" id="baResult"></div>
+        </div>
+    </section>
+</main>
+
+<!-- ================= 页脚 ================= -->
+<footer>
+    © 2026 安全智能运维平台 · 大四实训项目<br>
+    <span class="members">小组成员：郝宇星、王雅轩、杨睿、赵有宏</span>
+</footer>
+
+<script>
+    // 页面以 http 访问（同源）时用相对路径；以 file:// 直接打开时用绝对地址
+    const API_BASE = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8002";
+
+    // 通用 POST JSON 辅助函数
+    async function postJSON(url, data) {
+        const resp = await fetch(API_BASE + url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        if (!resp.ok) {
+            let msg = "HTTP " + resp.status;
+            try {
+                const j = await resp.json();
+                msg = j.message || j.detail || JSON.stringify(j);
+            } catch (e) { /* 忽略非 JSON 响应 */ }
+            throw new Error(msg);
+        }
+        return resp.json();
+    }
+
+    // ============================================================
+    // 选项卡切换
+    // ============================================================
+    document.querySelectorAll(".tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+            btn.classList.add("active");
+            document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+        });
+    });
+
+    // ============================================================
+    // 面板 1：Agent 对话（SSE 流式）
+    // ============================================================
+    const agentChat = document.getElementById("agentChat");
+    const agentQuestion = document.getElementById("agentQuestion");
+    const agentSend = document.getElementById("agentSend");
+    const agentClear = document.getElementById("agentClear");
+
+    const STEP_META = {
+        thought:     { icon: "💭", label: "Thought · 思考",   cls: "step-thought" },
+        action:      { icon: "⚡", label: "Action · 行动",    cls: "step-action" },
+        observation: { icon: "👁️", label: "Observation · 观察", cls: "step-observation" },
+        answer:      { icon: "✅", label: "Answer · 回答",    cls: "step-answer" },
+        error:       { icon: "❌", label: "Error · 错误",     cls: "step-error" },
+    };
+
+    let agentStreaming = false;
+    let pendingCard = null;
+    let typingEl = null;
+
+    function scrollChat() { agentChat.scrollTop = agentChat.scrollHeight; }
+
+    function addStepCard(type) {
+        const meta = STEP_META[type] || STEP_META.thought;
+        const el = document.createElement("div");
+        el.className = "step " + meta.cls;
+        el.innerHTML =
+            `<div class="step-head">${meta.icon} ${meta.label}</div>` +
+            `<div class="step-content placeholder">…</div>`;
+        agentChat.appendChild(el);
+        scrollChat();
+        return el.querySelector(".step-content");
+    }
+
+    function fillStep(card, text) {
+        card.textContent = text;
+        card.classList.remove("placeholder");
+        scrollChat();
+    }
+
+    function showTyping() {
+        typingEl = document.createElement("div");
+        typingEl.className = "typing";
+        typingEl.innerHTML = "<span></span><span></span><span></span>";
+        agentChat.appendChild(typingEl);
+        scrollChat();
+    }
+    function hideTyping() {
+        if (typingEl) { typingEl.remove(); typingEl = null; }
+    }
+
+    function handleAgentEvent(evt) {
+        switch (evt.type) {
+            case "step_start":    // content 为步骤类型名
+                hideTyping();
+                pendingCard = addStepCard(evt.content);
+                break;
+            case "step_content":  // 填充内容
+                if (pendingCard) fillStep(pendingCard, evt.content || "（空）");
+                break;
+            case "step_end":
+                pendingCard = null;
+                showTyping();
+                break;
+            case "done":
+                hideTyping();
+                break;
+            case "error":
+                hideTyping();
+                fillStep(addStepCard("error").parentNode.querySelector(".step-content"), evt.content);
+                pendingCard = null;
+                break;
+        }
+    }
+
+    async function agentRun() {
+        const question = agentQuestion.value.trim();
+        if (!question || agentStreaming) return;
+
+        agentStreaming = true;
+        agentSend.disabled = true;
+        agentQuestion.value = "";
+
+        // 用户消息气泡
+        const userEl = document.createElement("div");
+        userEl.className = "msg-user";
+        userEl.textContent = question;
+        agentChat.appendChild(userEl);
+        scrollChat();
+        showTyping();
+
+        try {
+            // POST 不支持 EventSource，改用 fetch + ReadableStream 消费 SSE
+            const resp = await fetch(API_BASE + "/agent/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: question }),
+            });
+            if (!resp.ok) {
+                hideTyping();
+                fillStep(addStepCard("error").parentNode.querySelector(".step-content"),
+                         "服务返回错误：HTTP " + resp.status);
+                return;
+            }
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE 事件以空行分隔，每行以 "data: " 开头
+                let idx;
+                while ((idx = buffer.indexOf("\n\n")) !== -1) {
+                    const rawEvent = buffer.slice(0, idx);
+                    buffer = buffer.slice(idx + 2);
+                    for (const line of rawEvent.split("\n")) {
+                        if (!line.startsWith("data: ")) continue;
+                        const payload = line.slice(6);
+                        if (payload === "[DONE]") { handleAgentEvent({ type: "done" }); continue; }
+                        try { handleAgentEvent(JSON.parse(payload)); } catch (e) { /* 忽略 */ }
+                    }
+                }
+            }
+        } catch (err) {
+            hideTyping();
+            fillStep(addStepCard("error").parentNode.querySelector(".step-content"),
+                     "网络错误：" + err.message);
+        } finally {
+            hideTyping();
+            agentStreaming = false;
+            agentSend.disabled = false;
+            agentQuestion.focus();
+        }
+    }
+
+    // 清空对话（仅清空界面显示）
+    agentClear.addEventListener("click", () => {
+        if (agentStreaming) return;
+        agentChat.innerHTML = "";
+    });
+
+    agentSend.addEventListener("click", agentRun);
+    agentQuestion.addEventListener("keydown", e => { if (e.key === "Enter") agentRun(); });
+
+    // ============================================================
+    // 面板 2：安全工具箱
+    // ============================================================
+    let currentTool = "analyze";  // 默认选中的工具
+    const TOOL_INFO = {
+        analyze:      { url: "/tool/analyze",      label: "🧪 漏洞分析" },
+        troubleshoot: { url: "/tool/troubleshoot", label: "🖥️ 故障排查" },
+        audit:        { url: "/tool/audit",        label: "🔍 配置审计" },
+    };
+    const toolInput = document.getElementById("toolInput");
+    const toolRun = document.getElementById("toolRun");
+    const toolResult = document.getElementById("toolResult");
+
+    // 工具按钮切换
+    document.querySelectorAll(".chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+            document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            currentTool = chip.dataset.tool;
+        });
+    });
+
+    async function runTool() {
+        const text = toolInput.value.trim();
+        if (!text) { alert("请输入要分析的内容"); return; }
+        toolRun.disabled = true;
+        toolResult.className = "result show";
+        toolResult.textContent = "⏳ 正在执行「" + TOOL_INFO[currentTool].label + "」…";
+        try {
+            const d = await postJSON(TOOL_INFO[currentTool].url, { input_text: text });
+            toolResult.innerHTML =
+                `<div class="result-title">${TOOL_INFO[currentTool].label} 报告</div>` +
+                escapeHtml(d.report ?? JSON.stringify(d, null, 2));
+        } catch (err) {
+            toolResult.classList.add("error");
+            toolResult.textContent = "❌ 调用失败：" + err.message;
+        } finally {
+            toolRun.disabled = false;
+        }
+    }
+    toolRun.addEventListener("click", runTool);
+
+    // ============================================================
+    // 面板 2：审计日志（查看工具调用记录）
+    // ============================================================
+    const logsBtn = document.getElementById("logsBtn");
+    const logsResult = document.getElementById("logsResult");
+    let logsVisible = false;  // 日志区当前是否展开（再点一次可收起）
+
+    logsBtn.addEventListener("click", async () => {
+        // 已展开时再次点击 → 收起
+        if (logsVisible) {
+            logsResult.classList.remove("show");
+            logsVisible = false;
+            return;
+        }
+
+        logsBtn.disabled = true;
+        logsResult.className = "result show";
+        logsResult.textContent = "⏳ 正在获取调用日志…";
+        try {
+            // GET /logs：返回 TOOL_CALL_LOG 全部记录
+            const resp = await fetch(API_BASE + "/logs");
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            const d = await resp.json();
+            const logs = d.data || [];
+
+            if (logs.length === 0) {
+                logsResult.innerHTML =
+                    `<div class="result-title">📋 工具调用日志</div>暂无调用记录，先执行一次工具试试`;
+            } else {
+                // 逐条渲染：时间戳 / 工具名 / 输入参数 / 执行结果
+                const rows = logs.map((l, i) =>
+                    `<div class="log-item">` +
+                    `<span class="log-idx">${i + 1}</span>` +
+                    `<div style="flex:1">` +
+                    `<div class="log-line">${escapeHtml(l.tool)} ` +
+                    `<span class="log-time">${escapeHtml(l.time)}</span></div>` +
+                    `<div class="log-sub">输入：${escapeHtml(l.input || "（空）")}</div>` +
+                    `<div class="log-sub">结果：${escapeHtml(l.result || "（无）")}</div>` +
+                    `</div></div>`).join("");
+                logsResult.innerHTML =
+                    `<div class="result-title">📋 工具调用日志（共 ${logs.length} 条）</div>` + rows;
+            }
+            logsVisible = true;
+        } catch (err) {
+            logsResult.classList.add("error");
+            logsResult.textContent = "❌ 获取日志失败：" + err.message;
+        } finally {
+            logsBtn.disabled = false;
+        }
+    });
+
+    // HTML 转义辅助函数
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ============================================================
+    // 面板 3：知识库问答
+    // ============================================================
+    const kbQuestion = document.getElementById("kbQuestion");
+    const kbAskBtn = document.getElementById("kbAskBtn");
+    const kbAnswer = document.getElementById("kbAnswer");
+    const kbSources = document.getElementById("kbSources");
+
+    async function kbAsk() {
+        const q = kbQuestion.value.trim();
+        if (!q) { alert("请输入问题"); return; }
+        kbAskBtn.disabled = true;
+        kbSources.classList.remove("show");
+        kbSources.innerHTML = "";
+        kbAnswer.className = "result show";
+        kbAnswer.textContent = "⏳ 正在检索知识库并生成回答…";
+        try {
+            const d = await postJSON("/rag-query", { question: q });
+            kbAnswer.innerHTML =
+                `<div class="result-title">💬 AI 回答</div>` + escapeHtml(d.answer || "（空）");
+
+            // 渲染参考来源（可折叠卡片）
+            const sources = d.sources || [];
+            if (sources.length > 0) {
+                kbSources.classList.add("show");
+                kbSources.innerHTML = `<div class="result-title">📎 参考来源（${sources.length} 个片段，点击展开）</div>`;
+                sources.forEach((s, i) => {
+                    const item = document.createElement("div");
+                    item.className = "source-item";
+                    const preview = s.length > 40 ? s.slice(0, 40) + "…" : s;
+                    item.innerHTML =
+                        `<button class="source-toggle"><span class="source-badge">片段 ${i + 1}</span>${escapeHtml(preview)}</button>` +
+                        `<div class="source-body">${escapeHtml(s)}</div>`;
+                    item.querySelector(".source-toggle").addEventListener("click", () => {
+                        item.classList.toggle("open");
+                    });
+                    kbSources.appendChild(item);
+                });
+            }
+        } catch (err) {
+            kbAnswer.classList.add("error");
+            kbAnswer.textContent = "❌ 调用失败：" + err.message;
+        } finally {
+            kbAskBtn.disabled = false;
+        }
+    }
+
+    // ============================================================
+    // 面板 4：浏览器助手
+    // ============================================================
+    const baContent = document.getElementById("baContent");
+    const baResult = document.getElementById("baResult");
+    const BA_LABEL = { summarize: "📝 总结", explain: "💡 解释", translate: "🔤 翻译" };
+
+    async function baRun(action) {
+        const content = baContent.value.trim();
+        if (!content) { alert("请先粘贴网页内容"); return; }
+        document.querySelectorAll("[data-action]").forEach(b => b.disabled = true);
+        baResult.className = "result show";
+        baResult.textContent = "⏳ 正在处理…";
+        try {
+            const d = await postJSON("/browser-assistant", { action, content });
+            baResult.innerHTML =
+                `<div class="result-title">${BA_LABEL[action]}结果</div>` +
+                escapeHtml(d.data ?? d.answer ?? JSON.stringify(d));
+        } catch (err) {
+            baResult.classList.add("error");
+            baResult.textContent = "❌ 调用失败：" + err.message;
+        } finally {
+            document.querySelectorAll("[data-action]").forEach(b => b.disabled = false);
+        }
+    }
+</script>
+</body>
+</html>
